@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { db } from "./firebase";
+import { get, set, ref, onValue } from "firebase/database";
 
 export default function Dashboard() {
   const videos = [
@@ -63,21 +65,38 @@ export default function Dashboard() {
   ];
 
   const [completed, setCompleted] = useState([]);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem("go-progress");
-    if (saved) {
-      try {
-        setCompleted(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to parse saved progress:", e);
+    // Listen for real-time updates from Firebase
+    const progressRef = ref(db, "go-progress");
+    const unsubscribe = onValue(
+      progressRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          setCompleted(snapshot.val());
+        } else {
+          setCompleted([]);
+        }
+        setLoaded(true);
+      },
+      (error) => {
+        console.error("Firebase real-time read error:", error);
+        setLoaded(true);
       }
-    }
+    );
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("go-progress", JSON.stringify(completed));
-  }, [completed]);
+    // Only save to Firebase after initial load
+    if (loaded) {
+      set(ref(db, "go-progress"), completed)
+        .catch((error) => {
+          console.error("Firebase write error:", error);
+        });
+    }
+  }, [completed, loaded]);
 
   const toggleVideo = (index) => {
     if (completed.includes(index)) {

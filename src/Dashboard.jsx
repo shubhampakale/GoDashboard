@@ -68,14 +68,17 @@ export default function Dashboard() {
   const [completed, setCompleted] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [user, setUser] = useState(null);
+  const [error, setError] = useState(null); // State to capture errors
 
   const handleLogin = async () => {
     try {
       googleProvider.setCustomParameters({ prompt: "select_account" });
       const result = await signInWithPopup(auth, googleProvider);
       setUser(result.user);
+      setError(null); // Clear any previous errors
     } catch (error) {
       console.error("Login failed:", error);
+      setError("Login failed. Please try again.");
     }
   };
 
@@ -84,8 +87,10 @@ export default function Dashboard() {
       await signOut(auth);
       setUser(null);
       setCompleted([]);
+      setError(null); // Clear any previous errors
     } catch (error) {
       console.error("Logout failed:", error);
+      setError("Logout failed. Please try again.");
     }
   };
 
@@ -105,6 +110,7 @@ export default function Dashboard() {
         },
         (error) => {
           console.error("Firebase real-time read error:", error);
+          setError("Failed to load progress. Please try again.");
           setLoaded(true);
         }
       );
@@ -117,6 +123,7 @@ export default function Dashboard() {
       // Save progress to Firebase for the logged-in user
       set(ref(db, `users/${user.uid}/go-progress`), completed).catch((error) => {
         console.error("Firebase write error:", error);
+        setError("Failed to save progress. Please try again.");
       });
     }
   }, [completed, loaded, user]);
@@ -143,6 +150,12 @@ export default function Dashboard() {
       >
         🎉 Go Programming Playlist Tracker 🌈
       </motion.h1>
+
+      {error && (
+        <div style={{ color: "#ff6a88", background: "#2b2b2b", padding: "10px", borderRadius: "8px", marginBottom: "20px" }}>
+          {error}
+        </div>
+      )}
 
       {!user ? (
         <button onClick={handleLogin} style={{ padding: "10px 20px", fontSize: "1rem", borderRadius: "8px", background: "#4285F4", color: "#fff", border: "none", cursor: "pointer" }}>

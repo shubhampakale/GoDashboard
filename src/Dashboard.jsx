@@ -2,7 +2,16 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { db, auth, googleProvider } from "./firebase";
 import { get, set, ref, onValue } from "firebase/database";
-import { signInWithPopup, signOut } from "firebase/auth";
+import { signInWithPopup, signOut, setPersistence, browserLocalPersistence } from "firebase/auth";
+
+// Set session persistence to 'local'
+setPersistence(auth, browserLocalPersistence)
+  .then(() => {
+    console.log("Persistence set to local.");
+  })
+  .catch((error) => {
+    console.error("Error setting persistence:", error);
+  });
 
 export default function Dashboard() {
   const videos = [

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { db } from "./firebase";
+import { db, auth, googleProvider } from "./firebase";
 import { get, set, ref, onValue } from "firebase/database";
+import { signInWithPopup, signOut } from "firebase/auth";
 
 export default function Dashboard() {
   const videos = [
@@ -66,6 +67,7 @@ export default function Dashboard() {
 
   const [completed, setCompleted] = useState([]);
   const [loaded, setLoaded] = useState(false);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     // Listen for real-time updates from Firebase
@@ -110,6 +112,24 @@ export default function Dashboard() {
 
   const colors = ["#ffadad", "#ffd6a5", "#fdffb6", "#caffbf", "#9bf6ff", "#a0c4ff", "#bdb2ff", "#ffc6ff"];
 
+  const handleLogin = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      setUser(result.user);
+    } catch (error) {
+      console.error("Login failed:", error);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      setUser(null);
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+
   return (
     <div style={{ fontFamily: "Comic Sans MS, sans-serif", padding: "20px", maxWidth: "900px", margin: "auto", background: "#000", borderRadius: "16px", boxShadow: "0 10px 20px rgba(0,0,0,0.5)" }}>
       <motion.h1
@@ -121,52 +141,67 @@ export default function Dashboard() {
         🎉 Go Programming Playlist Tracker 🌈
       </motion.h1>
 
-      <div style={{ background: "rgba(30,30,30,0.95)", borderRadius: "12px", padding: "20px" }}>
-        <h2 style={{ color: "#fff" }}>Progress: {progress}%</h2>
-        <div style={{ background: "#444", borderRadius: "12px", overflow: "hidden", marginBottom: "30px", height: "25px" }}>
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.5 }}
-            style={{
-              height: "100%",
-              background: "linear-gradient(90deg, #ff6a88, #ff99ac, #fc6076, #ff9a44)",
-              borderRadius: "12px"
-            }}
-          />
-        </div>
-
+      {!user ? (
+        <button onClick={handleLogin} style={{ padding: "10px 20px", fontSize: "1rem", borderRadius: "8px", background: "#4285F4", color: "#fff", border: "none", cursor: "pointer" }}>
+          Login with Google
+        </button>
+      ) : (
         <div>
-          {videos.map((title, index) => (
-            <motion.div
-              key={index}
-              whileHover={{ scale: 1.05 }}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                padding: "12px",
-                borderRadius: "10px",
-                marginBottom: "8px",
-                background: completed.includes(index) ? "#1b4332" : colors[index % colors.length],
-                cursor: "pointer",
-                border: "2px solid #fff",
-                boxShadow: "2px 2px 6px rgba(0,0,0,0.5)"
-              }}
-              onClick={() => toggleVideo(index)}
-            >
-              <input
-                type="checkbox"
-                checked={completed.includes(index)}
-                onChange={() => toggleVideo(index)}
-                style={{ marginRight: "10px", transform: "scale(1.3)" }}
-              />
-              <span style={{ textDecoration: completed.includes(index) ? "line-through" : "none", fontWeight: "bold", color: completed.includes(index) ? "#ddd" : "#111" }}>
-                {title}
-              </span>
-            </motion.div>
-          ))}
+          <p style={{ color: "#fff" }}>Welcome, {user.displayName}!</p>
+          <button onClick={handleLogout} style={{ padding: "10px 20px", fontSize: "1rem", borderRadius: "8px", background: "#DB4437", color: "#fff", border: "none", cursor: "pointer" }}>
+            Logout
+          </button>
         </div>
-      </div>
+      )}
+
+      {user && (
+        <div style={{ background: "rgba(30,30,30,0.95)", borderRadius: "12px", padding: "20px" }}>
+          <h2 style={{ color: "#fff" }}>Progress: {progress}%</h2>
+          <div style={{ background: "#444", borderRadius: "12px", overflow: "hidden", marginBottom: "30px", height: "25px" }}>
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.5 }}
+              style={{
+                height: "100%",
+                background: "linear-gradient(90deg, #ff6a88, #ff99ac, #fc6076, #ff9a44)",
+                borderRadius: "12px"
+              }}
+            />
+          </div>
+
+          <div>
+            {videos.map((title, index) => (
+              <motion.div
+                key={index}
+                whileHover={{ scale: 1.05 }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  padding: "12px",
+                  borderRadius: "10px",
+                  marginBottom: "8px",
+                  background: completed.includes(index) ? "#1b4332" : colors[index % colors.length],
+                  cursor: "pointer",
+                  border: "2px solid #fff",
+                  boxShadow: "2px 2px 6px rgba(0,0,0,0.5)"
+                }}
+                onClick={() => toggleVideo(index)}
+              >
+                <input
+                  type="checkbox"
+                  checked={completed.includes(index)}
+                  onChange={() => toggleVideo(index)}
+                  style={{ marginRight: "10px", transform: "scale(1.3)" }}
+                />
+                <span style={{ textDecoration: completed.includes(index) ? "line-through" : "none", fontWeight: "bold", color: completed.includes(index) ? "#ddd" : "#111" }}>
+                  {title}
+                </span>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

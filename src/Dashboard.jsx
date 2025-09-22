@@ -121,8 +121,10 @@ export default function Dashboard() {
 
   const colors = ["#ffadad", "#ffd6a5", "#fdffb6", "#caffbf", "#9bf6ff", "#a0c4ff", "#bdb2ff", "#ffc6ff"];
 
+  // Ensure the user is prompted to select an account every time
   const handleLogin = async () => {
     try {
+      googleProvider.setCustomParameters({ prompt: "select_account" });
       const result = await signInWithPopup(auth, googleProvider);
       setUser(result.user);
     } catch (error) {

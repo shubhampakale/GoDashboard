@@ -2,16 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { db, auth, googleProvider } from "./firebase";
 import { get, set, ref, onValue } from "firebase/database";
-import { signInWithPopup, signOut, setPersistence, browserLocalPersistence } from "firebase/auth";
-
-// Set session persistence to 'local'
-setPersistence(auth, browserLocalPersistence)
-  .then(() => {
-    console.log("Persistence set to local.");
-  })
-  .catch((error) => {
-    console.error("Error setting persistence:", error);
-  });
+import { signInWithPopup, signOut } from "firebase/auth";
 
 export default function Dashboard() {
   const videos = [
@@ -78,50 +69,6 @@ export default function Dashboard() {
   const [loaded, setLoaded] = useState(false);
   const [user, setUser] = useState(null);
 
-  useEffect(() => {
-    // Listen for real-time updates from Firebase
-    const progressRef = ref(db, "go-progress");
-    const unsubscribe = onValue(
-      progressRef,
-      (snapshot) => {
-        if (snapshot.exists()) {
-          setCompleted(snapshot.val());
-        } else {
-          setCompleted([]);
-        }
-        setLoaded(true);
-      },
-      (error) => {
-        console.error("Firebase real-time read error:", error);
-        setLoaded(true);
-      }
-    );
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    // Only save to Firebase after initial load
-    if (loaded) {
-      set(ref(db, "go-progress"), completed)
-        .catch((error) => {
-          console.error("Firebase write error:", error);
-        });
-    }
-  }, [completed, loaded]);
-
-  const toggleVideo = (index) => {
-    if (completed.includes(index)) {
-      setCompleted(completed.filter((i) => i !== index));
-    } else {
-      setCompleted([...completed, index]);
-    }
-  };
-
-  const progress = Math.round((completed.length / videos.length) * 100);
-
-  const colors = ["#ffadad", "#ffd6a5", "#fdffb6", "#caffbf", "#9bf6ff", "#a0c4ff", "#bdb2ff", "#ffc6ff"];
-
-  // Ensure the user is prompted to select an account every time
   const handleLogin = async () => {
     try {
       googleProvider.setCustomParameters({ prompt: "select_account" });
@@ -136,10 +83,55 @@ export default function Dashboard() {
     try {
       await signOut(auth);
       setUser(null);
+      setCompleted([]);
     } catch (error) {
       console.error("Logout failed:", error);
     }
   };
+
+  useEffect(() => {
+    if (user) {
+      // Listen for real-time updates for the logged-in user
+      const progressRef = ref(db, `users/${user.uid}/go-progress`);
+      const unsubscribe = onValue(
+        progressRef,
+        (snapshot) => {
+          if (snapshot.exists()) {
+            setCompleted(snapshot.val());
+          } else {
+            setCompleted([]);
+          }
+          setLoaded(true);
+        },
+        (error) => {
+          console.error("Firebase real-time read error:", error);
+          setLoaded(true);
+        }
+      );
+      return () => unsubscribe();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user && loaded) {
+      // Save progress to Firebase for the logged-in user
+      set(ref(db, `users/${user.uid}/go-progress`), completed).catch((error) => {
+        console.error("Firebase write error:", error);
+      });
+    }
+  }, [completed, loaded, user]);
+
+  const toggleVideo = (index) => {
+    if (completed.includes(index)) {
+      setCompleted(completed.filter((i) => i !== index));
+    } else {
+      setCompleted([...completed, index]);
+    }
+  };
+
+  const progress = Math.round((completed.length / videos.length) * 100);
+
+  const colors = ["#ffadad", "#ffd6a5", "#fdffb6", "#caffbf", "#9bf6ff", "#a0c4ff", "#bdb2ff", "#ffc6ff"];
 
   return (
     <div style={{ fontFamily: "Comic Sans MS, sans-serif", padding: "20px", maxWidth: "900px", margin: "auto", background: "#000", borderRadius: "16px", boxShadow: "0 10px 20px rgba(0,0,0,0.5)" }}>
